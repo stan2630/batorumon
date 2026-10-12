@@ -1,6 +1,6 @@
 # batorumon
 # TODO
-- [ ] 9/22/26 Snap to places
+- [X] 9/22/26 Snap to places
 - [ ] 9/22/26 Figure out how cards are formatted
 - [ ] 9/22/26 Draw monsters
 # Dev Log

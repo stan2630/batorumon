@@ -1,6 +1,6 @@
 export let cardData = {
     catung: {
-        name: "Catung",
+        name: "catung",
         type: "psychic",
         moves: [
             {
@@ -10,7 +10,7 @@ export let cardData = {
         ]
     },
     timerk: {
-        name: "Timerk",
+        name: "timerk",
         type: "fighter",
         moves: [
             {
