@@ -323,8 +323,8 @@ function gameDraw() {
     for (let i = 0; i < holders2.length; i++) {
         holders2[i].draw()
     }
-    epicCard.draw()
-    epicCard2.draw()
+    // epicCard.draw()
+    // epicCard2.draw()
     for (let i = 0; i < cards.length;i++) {
         cards[i].draw()
     }
