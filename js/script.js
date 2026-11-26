@@ -1,4 +1,4 @@
-import {loadImage,pointRect, getRandomInt, polyCircle, lineCircle, linePoint, pointCircle, drawPixelText, vec2 } from "./globals.js";
+import {loadImage,pointRect, getRandomInt, polyCircle, lineCircle, linePoint, pointCircle, drawPixelText, vec2,capitilize } from "./globals.js";
 import {cardData} from "./cards.js"
 const canvas = document.getElementById('canvas');
 
@@ -23,6 +23,7 @@ let mouseCoords = vec2()
 
 const cardSize = {"w":250,"h":450}
 
+let energyImage = loadImage("./img/energy.png")
 class Box {
     constructor(x,y,w=cardSize.w,h=cardSize.h,draggable=false) {
         this.x=x
@@ -86,6 +87,86 @@ function getMiddle(x,w=cardSize.w) {
     return x + w/2
 }
 
+class EnergyCard {
+    constructor(x, y, radius = 50) {
+        this.x = x;
+        this.y = y;
+        this.radius = radius;
+
+        this.clicked = false;
+        this.beforeClick = vec2();
+
+        this.color = "#eeeeee";
+        this.dragColor = "#e66a6a";
+        this.overlapping = false;
+    }
+
+    update() {
+        if (this.clicked && CLICKING) {
+            this.x = mouseCoords.x;
+            this.y = mouseCoords.y;
+        }
+
+        this.overlapping = -1;
+
+        for (let i = 0; i < cards.length; i++) {
+            let closestX = Math.max(cards[i].x, Math.min(this.x, cards[i].x + cards[i].w));
+            let closestY = Math.max(cards[i].y, Math.min(this.y, cards[i].y + cards[i].h));
+
+            let distance = Math.sqrt(
+                (this.x - closestX) ** 2 +
+                (this.y - closestY) ** 2
+            );
+
+            if (distance <= this.radius) {
+                this.overlapping = i;
+                break;
+            }
+        }
+
+        if (!CLICKING && this.clicked) {
+            if (this.overlapping !== -1) {
+                return cards[this.overlapping];
+            }
+
+            this.clicked = false;
+        }
+
+        if (CLICKING && !this.clicked) {
+            let distance = Math.sqrt(
+                (mouseCoords.x - this.x) ** 2 +
+                (mouseCoords.y - this.y) ** 2
+            );
+
+            if (distance <= this.radius) {
+                this.clicked = true;
+            }
+        }
+
+        return null;
+    }
+    draw() {
+        ctx.beginPath();
+
+        if (this.overlapping) {
+            ctx.fillStyle = "orange";
+        } else if (this.clicked) {
+            ctx.fillStyle = this.dragColor;
+        } else {
+            ctx.fillStyle = this.color;
+        }
+        ctx.fillStyle="#cbdbfc"
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.lineWidth = 5;
+        ctx.strokeStyle = "black";
+        ctx.stroke();
+    }
+}
+let energyHolderX = width*0.9
+let energyHolderY =  height*0.75
+let energyCards = [new EnergyCard(energyHolderX,energyHolderY,50)]
 let benchLineStart = height* 0.845
 let benchLineEnd = height*0.666
 class Card extends Box {
@@ -103,6 +184,10 @@ class Card extends Box {
         this.img = loadImage(`./img/${data.name}.png`)
         this.height = height * (1-0.15)
         this.location = "hand"
+        this.moves = data.moves
+        this.health = data.health
+        this.healthMax = this.health
+        this.energies = 0
     }
     update() {
         if (!CLICKING) {
@@ -116,7 +201,7 @@ class Card extends Box {
             }
         }
 
-        if (this.draggable && CLICKING && !this.clicked && amountClicked <= 0 &&
+        if (this.draggable && CLICKING && !this.clicked && !energyCards[0].clicked && amountClicked <= 0 &&
             pointRect(mouseCoords.x, mouseCoords.y,this.x,this.y,this.w,this.h)) {
             this.clicked = true;
             this.beforeClick.x = mouseCoords.x - this.x;
@@ -162,55 +247,6 @@ class Card extends Box {
             }
         }
     }
-    // update() {
-    //     let holder = 0
-    //     let least = Math.hypot(getMiddle(this.x)-getMiddle(holders[holder].x),getMiddle(this.y)-getMiddle(holders[holder].y))
-    //     for (let i = 0; i < holders.length; i++) {
-    //         let distance = Math.hypot(getMiddle(this.x)-getMiddle(holders[i].x),getMiddle(this.y)-getMiddle(holders[i].y))
-    //         if (distance <= least) {
-    //             least = distance
-    //             holder = i
-    //         }
-    //         // console.log(least)
-    //         // console.log(`${i}: ${Math.hypot(this.x-holders[i].x,this.y-holders[i].y)}`)
-    //     }
-    //     // console.log(holder)
-    //     if (!this.clicked && least < 150) {
-    //         console.log("HI")
-    //         // console.log("HELLO")
-    //         this.x = holders[holder].x
-    //         this.y = holders[holder].y
-    //         this.clicked = false
-    //         this.draggable = false
-    //         this.location = "holder"
-    //     }
-    //     // console.log(this.location)
-    //     // console.log(holder)
-    //     // console.log("YOU'RE DRAGGING IT" +this.draggable)
-    //     // console.log("IS CLICKING?" + CLICKING)
-    //     // console.log("IS in border?" + pointRect(mouseCoords.x,mouseCoords.y,this.x,this.y,this.w,this.h))
-    //     if (!CLICKING) {
-    //         this.clicked = false;
-    //     }
-    //     let amountClicked = 0
-    //     for (let i = 0; i < cards.length; i++) {
-    //         if (cards[i].clicked) {
-    //             amountClicked++;
-    //         }
-    //     }
-    //     // console.log(amountClicked)
-    //     if (this.draggable && CLICKING && !this.clicked && amountClicked <= 0 && pointRect(mouseCoords.x, mouseCoords.y, this.x, this.y, this.w, this.h)) {
-    //         this.clicked = true;
-
-    //         this.beforeClick.x = mouseCoords.x - this.x;
-    //         this.beforeClick.y = mouseCoords.y - this.y;
-    //     }
-
-    //     if (this.clicked) {
-    //         this.x = mouseCoords.x - this.beforeClick.x;
-    //         this.y = mouseCoords.y - this.beforeClick.y;
-    //     }
-    // }
 
     draw() {
         if (!this.clicked) {
@@ -225,7 +261,27 @@ class Card extends Box {
         // Name
         ctx.fillStyle="black"
         ctx.font = "48px arial";
-        ctx.fillText(this.name, this.x+5, this.y+43);
+        ctx.fillText(capitilize(this.name), this.x+5, this.y+43);
+        // Health
+        ctx.font ="43px arial"
+        ctx.fillText(this.health,this.x+190,this.y+40)
+        ctx.lineWidth = 10
+        ctx.beginPath(); 
+        let healthbarHeight=45
+        let healthbarStart = 180
+        let healthbarEnd = 240
+        let healthbarSize = healthbarEnd - healthbarStart
+        ctx.moveTo(this.x+healthbarEnd, this.y+healthbarHeight);
+        ctx.lineTo(this.x+healthbarStart, this.y+healthbarHeight);
+        ctx.stroke();
+        ctx.beginPath(); 
+        ctx.lineWidth =5
+        ctx.strokeStyle = "#27cb5b"
+        let healthgap=3
+        ctx.moveTo(this.x+healthbarStart+healthgap, this.y+healthbarHeight);
+        // this.health = 30
+        ctx.lineTo(this.x+healthbarStart+healthbarSize*(this.health/this.healthMax)-healthgap, this.y+healthbarHeight);
+        ctx.stroke();
         // Img box
         let imgBox = {"w":this.w-10,"h":this.h-280,
                       "x":this.x+5, "y":this.y+55}
@@ -239,6 +295,24 @@ class Card extends Box {
             imgBox.x+(imgBox.w-this.img.width)/2,
             imgBox.y+(imgBox.h-this.img.height)/2)
         // MOVES
+        let moveheight = imgBox.h+100
+        let energysize = 35
+        let fontsize = 35
+        for (let i = 0; i < this.moves.length; i++) {
+            for (let index = 0; index < this.moves[i].cost;index++) {
+                ctx.drawImage(energyImage,this.x+energysize*index,this.y+moveheight-40+fontsize*i+10)
+            }
+            ctx.fillStyle="black"
+            ctx.font = `${fontsize}px arial`;
+            ctx.fillText(this.moves[i].name, this.x+110, this.y+moveheight+fontsize*i);
+            ctx.fillText(this.moves[i].damage, this.x+205, this.y+moveheight+fontsize*i);
+        }
+        // Energies
+        // console.log(this.energies)
+        ctx.fillText("Energy:",this.x,this.y+this.h*0.9)
+        for (let i = 0; i < this.energies;i++) {
+            ctx.drawImage(energyImage,this.x+132 +energysize*i, this.y+this.h*0.83)
+        }
     }
 }
 
@@ -268,35 +342,44 @@ function gameUpdate() {
         // }
     // epicCard.update()
     // epicCard2.update()
-    for (let i = 0; i < cards.length; i++) {
-    if (cards[i].location == "hand" && !cards[i].clicked) {
-        let handCards = cards.filter(card => card.location == "hand");
-        let length = (handCards.length * cardSize.w)
-                   + ((handCards.length - 1) * padding);
+    for (let i = energyCards.length - 1; i >= 0; i--) {
+        let target = energyCards[i].update();
 
-        let handIndex = handCards.indexOf(cards[i]);
-
-        cards[i].x = (width - length) / 2
-                   + handIndex * (cardSize.w + padding);
-
-        cards[i].y = cards[i].height;
-    } else if (cards[i].location =="bench" && !cards[i].clicked) {
-        let benchCards = cards.filter(card => card.location == "bench");
-        let length = (benchCards.length * cardSize.w)
-                   + ((benchCards.length - 1) * padding);
-
-        let benchIndex = benchCards.indexOf(cards[i]);
-
-        cards[i].x = (width - length) / 2
-                   + benchIndex * (cardSize.w + padding);
-
-        cards[i].y = cards[i].height;
-        // console.log(cards[i].x)
-        // console.log(cards[i].y)
+        if (target !== null) {
+            target.energies++;
+            energyCards.splice(i, 1);
+        }
     }
+    for (let i = 0; i < cards.length; i++) {
+        if (cards[i].location == "hand" && !cards[i].clicked) {
+            let handCards = cards.filter(card => card.location == "hand");
+            let length = (handCards.length * cardSize.w)
+                    + ((handCards.length - 1) * padding);
 
-    cards[i].update();
-}
+            let handIndex = handCards.indexOf(cards[i]);
+
+            cards[i].x = (width - length) / 2
+                    + handIndex * (cardSize.w + padding);
+
+            cards[i].y = cards[i].height;
+        } else if (cards[i].location =="bench" && !cards[i].clicked) {
+            let benchCards = cards.filter(card => card.location == "bench");
+            let length = (benchCards.length * cardSize.w)
+                    + ((benchCards.length - 1) * padding);
+
+            let benchIndex = benchCards.indexOf(cards[i]);
+
+            cards[i].x = (width - length) / 2
+                    + benchIndex * (cardSize.w + padding);
+
+            cards[i].y = cards[i].height;
+            // console.log(cards[i].x)
+            // console.log(cards[i].y)
+        }
+
+        cards[i].update();
+    }
+    
     // for ( let i = 0; i < cards.length; i++) {
     //     let length = (cards.length * cardSize.w) + ((cards.length - 1) * padding)
     //     // console.log(cards[i].location)
@@ -308,6 +391,7 @@ function gameUpdate() {
     // }
     // console.log(CLICKING)
 }
+
 function gameDraw() {
     ctx.beginPath();
     ctx.moveTo(0, benchLineStart);
@@ -329,6 +413,25 @@ function gameDraw() {
         cards[i].draw()
     }
 
+    // Energy Holder
+    ctx.save()
+    let energyHolderR = 100
+    ctx.fillStyle="#eeeeee"
+    ctx.beginPath();
+    ctx.arc(energyHolderX,energyHolderY, 100, 0, 2 * Math.PI);
+    ctx.fill()
+    ctx.stroke();
+    ctx.fillStyle="#eeeeee"
+    ctx.lineWidth = 30
+    ctx.strokeStyle="#bbbbbb"
+    ctx.beginPath();
+    ctx.arc(energyHolderX,energyHolderY, energyHolderR*0.6, 0, 2 * Math.PI);
+    ctx.fill()
+    ctx.stroke();
+    ctx.restore()
+    if (energyCards.length != 0) {
+        energyCards[0].draw()
+    }
 }
 
 let dt;
